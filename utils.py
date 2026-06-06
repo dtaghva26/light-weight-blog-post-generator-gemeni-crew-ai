@@ -17,7 +17,7 @@ def _slug(text: str, max_len: int = 40) -> str:
     return slug[:max_len].rstrip("-")
 
 
-def save_report(blog_data: dict, html_string: str) -> Path:
+def save_report(blog_data: dict, html_string: str, audience: str = "adult") -> Path:
     _ensure_reports_dir()
     ts = datetime.now().strftime("%Y%m%d_%H%M%S")
     title = blog_data.get("title", "report")
@@ -25,6 +25,11 @@ def save_report(blog_data: dict, html_string: str) -> Path:
     base = REPORTS_DIR / f"{ts}_{slug}"
     html_path = base.with_suffix(".html")
     json_path = base.with_suffix(".json")
+
+    # Store audience in blog_data if not already present
+    if "audience" not in blog_data:
+        blog_data["audience"] = audience
+
     html_path.write_text(html_string, encoding="utf-8")
     json_path.write_text(json.dumps(blog_data, ensure_ascii=False, indent=2), encoding="utf-8")
     return html_path
