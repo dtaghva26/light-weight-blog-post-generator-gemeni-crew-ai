@@ -11,7 +11,8 @@ from typing import List
 
 load_dotenv()
 
-API_KEY = os.getenv("Gemeni_API_KEY")
+# Support both the typoed and correct environment variable names
+API_KEY = os.getenv("GEMINI_API_KEY") or os.getenv("Gemeni_API_KEY")
 
 
 class ArticleSection(BaseModel):
@@ -26,7 +27,8 @@ class StructuredBlogPost(BaseModel):
 
 
 def _build_crew(topic: str, num_sections: int, words_per_section: int) -> Crew:
-    gemini_llm = LLM(model="gemini/gemini-2.5-flash", api_key=API_KEY)
+    # Use a valid Gemini model name
+    gemini_llm = LLM(model="gemini/gemini-1.5-flash", api_key=API_KEY)
 
     researcher = Agent(
         role="Senior Research Analyst",
@@ -65,7 +67,8 @@ def _build_crew(topic: str, num_sections: int, words_per_section: int) -> Crew:
 
 
 def _build_kids_crew(topic: str, num_sections: int, words_per_section: int) -> Crew:
-    gemini_llm = LLM(model="gemini/gemini-2.5-flash", api_key=API_KEY)
+    # Use a valid Gemini model name
+    gemini_llm = LLM(model="gemini/gemini-1.5-flash", api_key=API_KEY)
 
     researcher = Agent(
         role="Curious Kid Explorer",
@@ -116,7 +119,7 @@ def _build_kids_crew(topic: str, num_sections: int, words_per_section: int) -> C
     return Crew(agents=[researcher, writer], tasks=[task1, task2], process=Process.sequential)
 
 
-def run_crew_streaming(topic: str, num_sections: int, words_per_section: int):
+def run_crew_streaming(topic: str, num_sections: int, words_per_section: int, crew_type: str = "adult"):
     """
     Generator that yields stdout log lines from the crew run, then a
     ("RESULT", dict) tuple on success or ("ERROR", str) on failure.
@@ -136,7 +139,10 @@ def run_crew_streaming(topic: str, num_sections: int, words_per_section: int):
         old_stdout = sys.stdout
         sys.stdout = QueueWriter()
         try:
-            crew = _build_crew(topic, num_sections, words_per_section)
+            if crew_type == "kids":
+                crew = _build_kids_crew(topic, num_sections, words_per_section)
+            else:
+                crew = _build_crew(topic, num_sections, words_per_section)
             result = crew.kickoff()
             blog_data = result.json_dict
             if blog_data is None:
@@ -161,10 +167,22 @@ def run_crew_streaming(topic: str, num_sections: int, words_per_section: int):
             continue
 
 
-def create_html(blog_data: dict, dark: bool = False) -> str:
+def create_html(blog_data: dict, dark: bool = False, audience: str = "adult") -> str:
     title = blog_data["title"]
     author = blog_data["author"]
     sections = blog_data["sections"]
+
+    # Audience-specific CSS overrides
+    extra_css = ""
+    if audience == "kids":
+        extra_css = """
+        @import url('https://fonts.googleapis.com/css2?family=Poppins:wght@400;600;700;800&display=swap');
+        body { font-family: 'Poppins', sans-serif !important; }
+        h1 { font-size: 2.4rem; font-weight: 800; color: #FF6B9D !important; }
+        h2 { font-size: 1.6rem; font-weight: 700; color: #7888BF !important; border-left: 6px solid #FFE87C; padding-left: 12px; margin-top: 2rem; }
+        p  { font-size: 1.1rem; line-height: 1.8; }
+        .author { color: #FF6B9D; font-weight: 600; font-size: 1.1rem; }
+        """
 
     if dark:
         css_vars = """
@@ -194,6 +212,7 @@ def create_html(blog_data: dict, dark: bool = False) -> str:
     <style>
         :root {{{css_vars}
         }}
+        {extra_css}
         body {{
             font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
             line-height: 1.75;

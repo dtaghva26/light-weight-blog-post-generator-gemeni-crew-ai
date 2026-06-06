@@ -4,16 +4,16 @@ A multi-agent pipeline that uses **CrewAI** and **Google Gemini** to autonomousl
 
 ## What It Does
 
-1. A **Researcher agent** identifies the top AI trends for 2026.
-2. A **Writer agent** turns those findings into a structured, database-ready blog post (validated via Pydantic).
-3. The output is rendered into a standalone, styled **HTML file** (`ai_trends_report.html`).
+1. A **Researcher agent** identifies trends (or fun facts for kids).
+2. A **Writer agent** turns those findings into a structured blog post or story (validated via Pydantic).
+3. The output is rendered into a standalone, styled **HTML report**.
 
 ## Stack
 
 | Tool | Role |
 |------|------|
 | [CrewAI](https://crewai.com) | Multi-agent orchestration |
-| [Google Gemini 2.5 Flash](https://ai.google.dev) | LLM powering both agents |
+| [Google Gemini 1.5 Flash](https://ai.google.dev) | LLM powering both agents |
 | [Pydantic](https://docs.pydantic.dev) | Structured JSON output validation |
 | `google-genai` | Direct Gemini API client (sanity test) |
 | `python-dotenv` | Environment variable management |
@@ -23,7 +23,7 @@ A multi-agent pipeline that uses **CrewAI** and **Google Gemini** to autonomousl
 ### 1. Install dependencies
 
 ```bash
-pip install crewai google-genai pydantic python-dotenv nest_asyncio
+pip install crewai google-genai pydantic python-dotenv nest_asyncio gradio
 ```
 
 ### 2. Configure your API key
@@ -31,7 +31,7 @@ pip install crewai google-genai pydantic python-dotenv nest_asyncio
 Create a `.env` file in the project root:
 
 ```env
-Gemeni_API_KEY=your_google_gemini_api_key_here
+GEMINI_API_KEY=your_google_gemini_api_key_here
 ```
 
 Get a key at [aistudio.google.com](https://aistudio.google.com).
@@ -76,13 +76,7 @@ The crew runs `Process.sequential` — the writer receives the researcher's outp
 
 ## Gradio Web App (`app.py`)
 
-The project now also ships a full **Gradio** web interface that wraps the same CrewAI pipeline with a live-streaming UI.
-
-### Additional dependency
-
-```bash
-pip install gradio
-```
+The project ships with a **Gradio** web interface that features a dual-mode experience for Adults and Kids.
 
 ### Run
 
@@ -94,6 +88,7 @@ Open `http://127.0.0.1:7860` in your browser.
 
 ### Features
 
+- **Dual Mode (Adult/Kids)** — Dynamic UI and agent personas tailored to the audience.
 - **Live agent log** — agent stdout streams to the UI while generation runs.
 - **Configurable output** — choose 2–5 sections and 100–400 words per section via sliders.
 - **Dark mode toggle** — re-renders the report theme on the fly.
