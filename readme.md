@@ -71,3 +71,50 @@ Task 2 → Writer: "Write a 200-word blog post from those trends"
 ```
 
 The crew runs `Process.sequential` — the writer receives the researcher's output before it begins.
+
+---
+
+## Gradio Web App (`app.py`)
+
+The project now also ships a full **Gradio** web interface that wraps the same CrewAI pipeline with a live-streaming UI.
+
+### Additional dependency
+
+```bash
+pip install gradio
+```
+
+### Run
+
+```bash
+python app.py
+```
+
+Open `http://127.0.0.1:7860` in your browser.
+
+### Features
+
+- **Live agent log** — agent stdout streams to the UI while generation runs.
+- **Configurable output** — choose 2–5 sections and 100–400 words per section via sliders.
+- **Dark mode toggle** — re-renders the report theme on the fly.
+- **Download** — saves both an HTML and a Markdown file per report.
+- **Past Reports** — dropdown to reload and re-render any previously generated report.
+
+### How it saves reports
+
+Each run writes three files under `reports/`:
+
+```
+reports/
+└── <YYYYMMDD_HHMMSS>_<slug>.html   # styled HTML report
+    <YYYYMMDD_HHMMSS>_<slug>.json   # raw structured data (Pydantic output)
+    <YYYYMMDD_HHMMSS>_<slug>.md     # Markdown export
+```
+
+### App structure
+
+```
+app.py          # Gradio UI and event wiring
+agents.py       # CrewAI crew, tasks, agents, HTML renderer  (shared with notebook)
+utils.py        # Report save/load, markdown export, slug helpers
+```
