@@ -7,7 +7,42 @@ def _fmt_date(dt: datetime) -> str:
     return dt.strftime("%B %d, %Y").replace(" 0", " ")
 
 
-def create_html(blog_data: dict, dark: bool = False, audience: str = "adult") -> str:
+def _accessibility_css(easy_font: bool, large_print: bool, reduce_motion: bool) -> str:
+    """Override layer appended after all mode CSS so it always wins."""
+    css = ""
+    if easy_font:
+        css += """
+        /* Easy-read font (dyslexia-friendly stack, no remote fonts needed) */
+        body, body * {
+            font-family: 'OpenDyslexic', 'Comic Sans MS', 'Comic Neue', Verdana, sans-serif !important;
+            letter-spacing: 0.03em !important;
+        }"""
+    if large_print:
+        css += """
+        /* Large print */
+        p, li { font-size: 1.5rem !important; line-height: 2.1 !important; }
+        h1 { font-size: 3rem !important; }
+        h2 { font-size: 2rem !important; }"""
+    if reduce_motion:
+        css += """
+        /* Reduce motion */
+        *, *::before, *::after { animation: none !important; transition: none !important; }"""
+    return css
+
+
+_PRINT_CSS = """
+        @media print {
+            body { background: #fff !important; padding: 0 !important; }
+            body *, body *::before, body *::after { animation: none !important; transition: none !important; }
+            .container { box-shadow: none !important; border: none !important; max-width: 100% !important; padding: 0 !important; border-radius: 0 !important; }
+            .section-block { page-break-inside: avoid; box-shadow: none !important; }
+            .review-schedule { page-break-inside: avoid; }
+        }"""
+
+
+def create_html(blog_data: dict, dark: bool = False, audience: str = "adult",
+                easy_font: bool = False, large_print: bool = False,
+                reduce_motion: bool = False) -> str:
     title = blog_data["title"]
     author = blog_data["author"]
     sections = blog_data["sections"]
@@ -235,6 +270,8 @@ def create_html(blog_data: dict, dark: bool = False, audience: str = "adult") ->
             h2 {{ font-size: 1.25rem; }}
             .review-panels {{ grid-template-columns: 1fr; }}
         }}
+        {_accessibility_css(easy_font, large_print, reduce_motion)}
+        {_PRINT_CSS}
     </style>
 </head>
 <body>
@@ -349,6 +386,81 @@ def create_html(blog_data: dict, dark: bool = False, audience: str = "adult") ->
 </html>
 """
     return html
+
+
+def create_worksheet_html(blog_data: dict) -> str:
+    """A4 print-ready comprehension worksheet built from each section's review_prompts."""
+    title = blog_data.get("title", "Untitled")
+
+    questions_html = ""
+    q_num = 0
+    for section in blog_data.get("sections", []):
+        if isinstance(section, dict):
+            heading = section.get("heading", "")
+            prompts = section.get("review_prompts") or []
+        else:
+            heading = section.heading
+            prompts = section.review_prompts or []
+        if not prompts:
+            continue
+        questions_html += f'<h2>{heading}</h2>'
+        for q in prompts:
+            q_num += 1
+            questions_html += f"""
+        <div class="question">
+            <p class="q-text">{q_num}. {q}</p>
+            <div class="answer-line"></div>
+            <div class="answer-line"></div>
+        </div>"""
+
+    if q_num == 0:
+        questions_html = "<p>No questions were generated for this story.</p>"
+
+    return f"""<!DOCTYPE html>
+<html lang="en-GB">
+<head>
+    <meta charset="UTF-8">
+    <title>Worksheet — {title}</title>
+    <style>
+        @page {{ size: A4; margin: 2cm; }}
+        body {{
+            font-family: 'Comic Sans MS', 'Comic Neue', Verdana, sans-serif;
+            color: #1e293b;
+            max-width: 17cm;
+            margin: 0 auto;
+            padding: 24px;
+            line-height: 1.6;
+        }}
+        .name-date {{
+            display: flex;
+            justify-content: space-between;
+            gap: 24px;
+            margin-bottom: 20px;
+            font-size: 1rem;
+        }}
+        .name-date span {{ flex: 1; border-bottom: 2px solid #1e293b; padding-bottom: 2px; }}
+        h1 {{ font-size: 1.6rem; text-align: center; margin: 8px 0 4px 0; }}
+        .subtitle {{ text-align: center; font-size: 0.95rem; color: #475569; margin: 0 0 24px 0; }}
+        h2 {{ font-size: 1.1rem; margin: 24px 0 4px 0; border-bottom: 1px solid #cbd5e1; padding-bottom: 2px; }}
+        .question {{ page-break-inside: avoid; margin: 14px 0; }}
+        .q-text {{ margin: 0 0 10px 0; font-size: 1.05rem; }}
+        .answer-line {{ border-bottom: 1.5px solid #94a3b8; height: 28px; }}
+        @media print {{
+            body {{ padding: 0; }}
+        }}
+    </style>
+</head>
+<body>
+    <div class="name-date">
+        <span>Name:&nbsp;</span>
+        <span>Date:&nbsp;</span>
+    </div>
+    <h1>{title}</h1>
+    <p class="subtitle">Read the story, then answer the questions in full sentences.</p>
+    {questions_html}
+</body>
+</html>
+"""
 
 
 def blog_to_markdown(blog_data: dict) -> str:

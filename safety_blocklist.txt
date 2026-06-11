@@ -1,0 +1,40 @@
+# Topic blocklist for pupil use — one term per line, lines starting with # are ignored.
+# Matching is whole-word and case-insensitive ("grape" will NOT match "rape").
+# Add or remove terms to suit your class. Blocked attempts are logged to
+# reports/blocked_topics.log for you to review.
+gun
+guns
+knife
+knives
+weapon
+weapons
+bomb
+bombs
+kill
+killing
+murder
+war
+terrorist
+terrorism
+drugs
+alcohol
+beer
+wine
+vodka
+cigarette
+cigarettes
+vape
+vaping
+smoking
+gambling
+casino
+sex
+sexy
+naked
+nude
+porn
+suicide
+self harm
+self-harm
+gore
+torture

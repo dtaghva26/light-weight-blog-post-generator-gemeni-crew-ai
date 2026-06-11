@@ -10,11 +10,16 @@ from modes.registry import register
 load_dotenv()
 
 
-def _build(topic: str, num_sections: int, words_per_section: int) -> Crew:
+def _build(topic: str, num_sections: int, words_per_section: int, subject: str = None) -> Crew:
     gemini_llm = LLM(
         model="gemini/gemini-3.5-flash",
         api_key=os.getenv("GEMINI_API_KEY") or os.getenv("Gemeni_API_KEY"),
     )
+
+    subject_note = (
+        f" Frame the perspectives to support the {subject} programme of study "
+        f"in the National Curriculum for England."
+    ) if subject else ""
 
     researcher = Agent(
         role="Perspective Collector",
@@ -48,6 +53,7 @@ def _build(topic: str, num_sections: int, words_per_section: int) -> Crew:
             f"Collect {num_sections} distinct viewpoints or perspectives that people hold about '{topic}'. "
             f"For each perspective, describe who holds it and why they believe it. "
             f"Do NOT evaluate which perspective is better — just present them all fairly."
+            f"{subject_note}"
         ),
         expected_output=f"A bulleted list of {num_sections} different perspectives on {topic}, each described without judgment.",
         agent=researcher,
@@ -83,6 +89,7 @@ register(ModeDefinition(
     min_age=11,
     order=2,
     build_crew=_build,
+    teacher_only=True,
 
     # theme
     title="# 🔍 Perspectives Explorer\nDiscover what different people think about any topic",

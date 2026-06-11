@@ -10,11 +10,16 @@ from modes.registry import register
 load_dotenv()
 
 
-def _build(topic: str, num_sections: int, words_per_section: int) -> Crew:
+def _build(topic: str, num_sections: int, words_per_section: int, subject: str = None) -> Crew:
     gemini_llm = LLM(
         model="gemini/gemini-3.5-flash",
         api_key=os.getenv("GEMINI_API_KEY") or os.getenv("Gemeni_API_KEY"),
     )
+
+    subject_note = (
+        f" Frame the facts to support the {subject} programme of study "
+        f"in the National Curriculum for England."
+    ) if subject else ""
 
     researcher = Agent(
         role="Fact Finder",
@@ -46,6 +51,7 @@ def _build(topic: str, num_sections: int, words_per_section: int) -> Crew:
             f"Find {num_sections} clear, definitive facts about '{topic}' that a 6-year-old can understand. "
             f"Write each fact as a simple, confident statement. No maybes. No 'some experts say'. "
             f"Use only words a young child knows."
+            f"{subject_note}"
         ),
         expected_output=f"A bulleted list of {num_sections} simple, definitive facts about {topic} for young children.",
         agent=researcher,

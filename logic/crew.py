@@ -14,10 +14,14 @@ load_dotenv()
 _log = get_logger("crew")
 
 
-def run_crew_streaming(topic: str, num_sections: int, words_per_section: int, crew_type: str = "evaluativist"):
+def run_crew_streaming(topic: str, num_sections: int, words_per_section: int,
+                       crew_type: str = "evaluativist", subject: str = None):
     """
     Generator that yields stdout log lines from the crew run, then a
     ("RESULT", dict) tuple on success or ("ERROR", str) on failure.
+
+    `subject` is an optional National Curriculum subject (e.g. "Science") that
+    steers the Researcher toward curriculum-relevant content.
     """
     log_q: queue.Queue = queue.Queue()
 
@@ -31,13 +35,13 @@ def run_crew_streaming(topic: str, num_sections: int, words_per_section: int, cr
             pass
 
     def _run():
-        _log.info("run_start  crew_type=%s  topic=%r  sections=%d  words=%d",
-                  crew_type, topic, num_sections, words_per_section)
+        _log.info("run_start  crew_type=%s  topic=%r  sections=%d  words=%d  subject=%s",
+                  crew_type, topic, num_sections, words_per_section, subject)
         old_stdout = sys.stdout
         sys.stdout = QueueWriter()
         try:
             from modes.registry import get as get_mode
-            crew = get_mode(crew_type).build_crew(topic, num_sections, words_per_section)
+            crew = get_mode(crew_type).build_crew(topic, num_sections, words_per_section, subject=subject)
             result = crew.kickoff()
             blog_data = result.json_dict
             if blog_data is None:

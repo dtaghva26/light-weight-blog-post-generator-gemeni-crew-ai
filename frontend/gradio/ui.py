@@ -3,23 +3,29 @@ import gradio as gr
 from modes.registry import all_modes as _all_modes
 
 _modes = _all_modes()
-_mode_names = [m.display_name for m in _modes]
-_default_mode = next(m for m in _modes if m.crew_type == "evaluativist")
+_default_mode = next(m for m in _modes if m.crew_type == "lks2")
 
 from frontend.gradio.handlers import (
+    YEAR_GROUPS,
+    SUBJECTS,
     generate,
     load_history,
-    rerender_dark,
+    rerender_view,
+    on_motion_toggle,
     update_ui,
-    on_age_submit,
+    on_class_setup,
+    unlock_teacher,
+    pupil_mode_names,
     _report_choices,
 )
+
+_pupil_names = pupil_mode_names()
 
 
 def _build_update_ui_outputs(
     style_tag, title_markdown, topic_input, gen_btn, log_box, html_preview,
     settings_accordion, num_sections, words_per_section, dark_toggle,
-    history_title, history_dd, load_btn, dl_html, dl_md,
+    history_title, history_dd, load_btn, dl_html, dl_md, dl_worksheet,
 ):
     def _fn(audience):
         ui = update_ui(audience)
@@ -39,18 +45,18 @@ def _build_update_ui_outputs(
             load_btn: gr.update(value=ui["load_btn_label"]),
             dl_html: gr.update(label=ui["dl_html_label"]),
             dl_md: gr.update(label=ui["dl_md_label"]),
+            dl_worksheet: gr.update(label=ui["dl_worksheet_label"]),
         }
 
     return _fn
 
 
-with gr.Blocks(
-    theme=gr.themes.Soft(),
-    title="AI Blog & Story Generator",
-    css="""
+# Gradio 6 moved theme/css from the Blocks constructor to launch() — app.py passes these.
+APP_THEME = gr.themes.Soft()
+APP_CSS = """
     .generate-btn { font-size: 1rem !important; }
     #log-box textarea { font-family: monospace; font-size: 0.8rem; }
-    .age-gate-wrap {
+    .setup-wrap {
         display: flex !important;
         flex-direction: column !important;
         align-items: center !important;
@@ -59,53 +65,64 @@ with gr.Blocks(
         text-align: center;
         padding: 2rem;
     }
-    .age-gate-inner { max-width: 320px; width: 100%; margin: 0 auto; }
-    """,
-) as demo:
+    .setup-inner { max-width: 360px; width: 100%; margin: 0 auto; }
+"""
 
-    # ── Age gate (shown on load) ──────────────────────────────────────────────
-    with gr.Column(visible=True, elem_classes="age-gate-wrap") as age_gate:
-        gr.Markdown("## How old are you?\n\nWe'll tailor the experience just for you.")
-        with gr.Column(elem_classes="age-gate-inner"):
-            age_input = gr.Number(
-                label="Your age",
-                minimum=1,
-                maximum=120,
-                precision=0,
-                value=None,
+with gr.Blocks(title="Classroom Story & Report Maker") as demo:
+
+    # ── Class setup (shown on load — replaces the old age gate) ───────────────
+    with gr.Column(visible=True, elem_classes="setup-wrap") as setup_col:
+        gr.Markdown("## 🏫 Welcome to our Story & Report Maker!\n\nChoose your class to get started.")
+        with gr.Column(elem_classes="setup-inner"):
+            year_dd = gr.Dropdown(
+                label="Year group",
+                choices=list(YEAR_GROUPS.keys()),
+                value="Years 3–4 (ages 7–9)",
             )
-            age_btn = gr.Button("Get Started", variant="primary", size="lg")
+            setup_btn = gr.Button("Let's Go!", variant="primary", size="lg")
 
-    # ── Main app (hidden until age is entered) ────────────────────────────────
+    # ── Main app (hidden until a class is chosen) ─────────────────────────────
     with gr.Column(visible=False) as main_ui:
 
         with gr.Row():
             audience_selector = gr.Radio(
-                _mode_names,
-                label="Critical Thinking Stage",
+                _pupil_names,
+                label="Who is this for?",
                 value=_default_mode.display_name,
             )
 
         style_tag = gr.HTML("", visible=True)
+        motion_style = gr.HTML("<style></style>", visible=True)
         title_markdown = gr.Markdown(_default_mode.title)
 
         with gr.Row():
             with gr.Column(scale=3):
                 topic_input = gr.Textbox(
                     label=_default_mode.topic_label,
-                    value="AI",
+                    value="",
                     placeholder=_default_mode.topic_placeholder,
                     lines=1,
                 )
             with gr.Column(scale=1):
+                subject_dd = gr.Dropdown(
+                    label="School subject",
+                    choices=SUBJECTS,
+                    value="Any topic",
+                )
+            with gr.Column(scale=1):
                 gen_btn = gr.Button(_default_mode.gen_btn, variant="primary", elem_classes="generate-btn")
 
-        with gr.Accordion(_default_mode.settings_label, open=False) as settings_accordion:
+        with gr.Row():
+            dark_toggle = gr.Checkbox(label=_default_mode.dark_toggle_label, value=False)
+            easy_font = gr.Checkbox(label="🔤 Easy-read font", value=False)
+            large_print = gr.Checkbox(label="🔎 Large print", value=False)
+            reduce_motion = gr.Checkbox(label="🦋 Calm screen (no animations)", value=False)
+
+        # Hidden in pupil mode — revealed by the teacher PIN
+        with gr.Accordion(_default_mode.settings_label, open=False, visible=False) as settings_accordion:
             with gr.Row():
                 num_sections = gr.Slider(2, 5, value=3, step=1, label=_default_mode.num_sections_label)
-                words_per_section = gr.Slider(100, 400, value=200, step=50, label=_default_mode.words_per_section_label)
-
-        dark_toggle = gr.Checkbox(label=_default_mode.dark_toggle_label, value=False)
+                words_per_section = gr.Slider(50, 400, value=150, step=50, label=_default_mode.words_per_section_label)
 
         with gr.Row():
             with gr.Column(scale=1):
@@ -123,58 +140,74 @@ with gr.Blocks(
         with gr.Row():
             dl_html = gr.File(label=_default_mode.dl_html_label, interactive=False)
             dl_md = gr.File(label=_default_mode.dl_md_label, interactive=False)
+            dl_worksheet = gr.File(label=_default_mode.dl_worksheet_label, interactive=False)
+
+        # Hidden in pupil mode — revealed by the teacher PIN
+        with gr.Column(visible=False) as history_col:
+            gr.Markdown("---")
+            history_title = gr.Markdown(_default_mode.history_title)
+            with gr.Row():
+                history_dd = gr.Dropdown(
+                    label=_default_mode.history_dd_label,
+                    choices=_report_choices(),
+                    interactive=True,
+                    scale=4,
+                )
+                load_btn = gr.Button(_default_mode.load_btn_label, scale=1)
 
         gr.Markdown("---")
-        history_title = gr.Markdown(_default_mode.history_title)
-        with gr.Row():
-            history_dd = gr.Dropdown(
-                label=_default_mode.history_dd_label,
-                choices=_report_choices(),
-                interactive=True,
-                scale=4,
-            )
-            load_btn = gr.Button(_default_mode.load_btn_label, scale=1)
+        with gr.Accordion("🔑 Teacher unlock", open=False):
+            with gr.Row():
+                pin_box = gr.Textbox(label="Teacher PIN", type="password", scale=3)
+                unlock_btn = gr.Button("Unlock", scale=1)
+            teacher_status = gr.Markdown("")
 
     # ── Event wiring ──────────────────────────────────────────────────────────
-    _age_outputs = [
-        age_gate, main_ui, audience_selector,
+    _setup_outputs = [
+        setup_col, main_ui, audience_selector,
         style_tag, title_markdown, topic_input, gen_btn, log_box,
         html_preview, settings_accordion, num_sections,
         words_per_section, dark_toggle, history_title,
-        history_dd, load_btn, dl_html, dl_md,
+        history_dd, load_btn, dl_html, dl_md, dl_worksheet,
     ]
 
-    age_btn.click(fn=on_age_submit, inputs=[age_input], outputs=_age_outputs)
-    age_input.submit(fn=on_age_submit, inputs=[age_input], outputs=_age_outputs)
+    setup_btn.click(fn=on_class_setup, inputs=[year_dd], outputs=_setup_outputs)
 
     audience_selector.change(
         fn=_build_update_ui_outputs(
             style_tag, title_markdown, topic_input, gen_btn, log_box, html_preview,
             settings_accordion, num_sections, words_per_section, dark_toggle,
-            history_title, history_dd, load_btn, dl_html, dl_md,
+            history_title, history_dd, load_btn, dl_html, dl_md, dl_worksheet,
         ),
         inputs=[audience_selector],
         outputs=[
             style_tag, title_markdown, topic_input, gen_btn, log_box, html_preview,
             settings_accordion, num_sections, words_per_section, dark_toggle,
-            history_title, history_dd, load_btn, dl_html, dl_md,
+            history_title, history_dd, load_btn, dl_html, dl_md, dl_worksheet,
         ],
     )
 
     gen_btn.click(
         fn=generate,
-        inputs=[audience_selector, topic_input, num_sections, words_per_section, dark_toggle],
-        outputs=[log_box, html_preview, dl_html, dl_md, history_dd],
+        inputs=[audience_selector, topic_input, subject_dd, num_sections,
+                words_per_section, dark_toggle, easy_font, large_print, reduce_motion],
+        outputs=[log_box, html_preview, dl_html, dl_md, dl_worksheet, history_dd],
     )
 
     load_btn.click(
         fn=load_history,
-        inputs=[history_dd, dark_toggle],
-        outputs=[html_preview, dl_html, dl_md],
+        inputs=[history_dd, dark_toggle, easy_font, large_print, reduce_motion],
+        outputs=[html_preview, dl_html, dl_md, dl_worksheet],
     )
 
-    dark_toggle.change(
-        fn=rerender_dark,
-        inputs=[dl_html, dark_toggle],
-        outputs=[html_preview],
+    _view_inputs = [dl_html, dark_toggle, easy_font, large_print, reduce_motion]
+    dark_toggle.change(fn=rerender_view, inputs=_view_inputs, outputs=[html_preview])
+    easy_font.change(fn=rerender_view, inputs=_view_inputs, outputs=[html_preview])
+    large_print.change(fn=rerender_view, inputs=_view_inputs, outputs=[html_preview])
+    reduce_motion.change(fn=on_motion_toggle, inputs=_view_inputs, outputs=[motion_style, html_preview])
+
+    unlock_btn.click(
+        fn=unlock_teacher,
+        inputs=[pin_box],
+        outputs=[audience_selector, settings_accordion, history_col, teacher_status, pin_box],
     )

@@ -46,3 +46,7 @@ class ModeDefinition:
     empty_msg: str
     error_msg: Callable  # (e: str) -> str
     done_msg: str
+
+    # ── Classroom controls ─────────────────────────────────────────────────────
+    teacher_only: bool = False  # hidden from the pupil-facing radio until teacher PIN unlock
+    dl_worksheet_label: str = "🖨️ Print Worksheet"

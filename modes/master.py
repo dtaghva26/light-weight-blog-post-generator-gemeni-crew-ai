@@ -10,11 +10,16 @@ from modes.registry import register
 load_dotenv()
 
 
-def _build(topic: str, num_sections: int, words_per_section: int) -> Crew:
+def _build(topic: str, num_sections: int, words_per_section: int, subject: str = None) -> Crew:
     gemini_llm = LLM(
         model="gemini/gemini-3.5-flash",
         api_key=os.getenv("GEMINI_API_KEY") or os.getenv("Gemeni_API_KEY"),
     )
+
+    subject_note = (
+        f" Frame the analysis to support the {subject} programme of study "
+        f"in the National Curriculum for England."
+    ) if subject else ""
 
     researcher = Agent(
         role="Epistemic Analyst",
@@ -56,6 +61,7 @@ def _build(topic: str, num_sections: int, words_per_section: int) -> Crew:
             f"For each, explicitly identify: the underlying assumptions, the quality and limits of supporting evidence, "
             f"where expert consensus is genuinely weak or contested, and what a thoughtful critic would challenge. "
             f"Flag your own potential blind spots in this analysis."
+            f"{subject_note}"
         ),
         expected_output=(
             f"A structured list of {num_sections} epistemic analyses of claims about {topic}, "
@@ -96,6 +102,7 @@ register(ModeDefinition(
     min_age=40,
     order=4,
     build_crew=_build,
+    teacher_only=True,
 
     # theme
     title="# Deep Analysis Engine\nEpistemic synthesis powered by **CrewAI** + **Google Gemini**",

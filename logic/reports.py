@@ -46,6 +46,8 @@ def list_reports() -> list:
     html_files = sorted(REPORTS_DIR.glob("*.html"), reverse=True)
     reports = []
     for html_path in html_files:
+        if html_path.stem.endswith("_worksheet"):
+            continue
         json_path = html_path.with_suffix(".json")
         title = html_path.stem
         if json_path.exists():

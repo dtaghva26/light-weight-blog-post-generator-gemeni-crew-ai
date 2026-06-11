@@ -51,7 +51,7 @@ from modes.registry import register
 load_dotenv()
 
 
-def _build(topic: str, num_sections: int, words_per_section: int) -> Crew:
+def _build(topic: str, num_sections: int, words_per_section: int, subject: str = None) -> Crew:
     gemini_llm = LLM(
         model="gemini/gemini-3.5-flash",
         api_key=os.getenv("GEMINI_API_KEY") or os.getenv("Gemeni_API_KEY"),
@@ -173,6 +173,7 @@ This is where you define the AI behaviour. The function receives three arguments
 | `topic` | `str` | Whatever the user typed in the text box |
 | `num_sections` | `int` | How many sections the article should have (from the slider) |
 | `words_per_section` | `int` | How long each section should be (from the slider) |
+| `subject` | `str` or `None` | The school subject from the dropdown (`None` when "Any topic" is selected). **Your `_build` must accept this keyword argument**, even if it ignores it. |
 
 Inside `_build()` you create:
 
@@ -291,7 +292,7 @@ for _finder, name, _ispkg in pkgutil.iter_modules(_pkg.__path__):
         importlib.import_module(f"modes.{name}")
 ```
 
-`pkgutil.iter_modules` lists every `.py` file in the `modes/` folder. It imports each one. When your file is imported, the line at the bottom — `register(ModeDefinition(...))` — runs automatically, adding your mode to the registry. From that point, every other part of the app (the radio button list, the routing, the CSS injection, the age gate) pulls from the registry, so your mode appears everywhere.
+`pkgutil.iter_modules` lists every `.py` file in the `modes/` folder. It imports each one. When your file is imported, the line at the bottom — `register(ModeDefinition(...))` — runs automatically, adding your mode to the registry. From that point, every other part of the app (the radio button list, the routing, the CSS injection, the class setup screen) pulls from the registry, so your mode appears everywhere. Set `teacher_only=True` in your `ModeDefinition` if the mode should stay hidden from pupils until the teacher PIN is entered.
 
 ---
 
@@ -336,7 +337,7 @@ from modes.registry import register
 
 load_dotenv()
 
-def _build(topic, num_sections, words_per_section):
+def _build(topic, num_sections, words_per_section, subject=None):
     llm = LLM(model="gemini/gemini-3.5-flash",
               api_key=os.getenv("GEMINI_API_KEY") or os.getenv("Gemeni_API_KEY"))
 
