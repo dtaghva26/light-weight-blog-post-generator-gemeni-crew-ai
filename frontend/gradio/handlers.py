@@ -71,7 +71,7 @@ def _report_choices() -> list[str]:
 
 def _choice_to_path(choice: str) -> str | None:
     reports = list_reports()
-    choices = _report_choices()
+    choices = [f"{r['timestamp']} — {r['title'][:60]}" for r in reports]
     if choice in choices:
         idx = choices.index(choice)
         return reports[idx]["path"]
@@ -108,7 +108,7 @@ def generate(audience: str, topic: str, subject: str, num_sections: int,
     _log.info("generate_requested  audience=%s  topic=%r  subject=%s  sections=%d  words=%d",
               audience, topic.strip(), subject_arg, int(num_sections), int(words_per_section))
 
-    log_lines: list[str] = []
+    log_text: str = ""
     blog_data = None
 
     for item in run_crew_streaming(topic.strip(), int(num_sections), int(words_per_section),
@@ -116,14 +116,14 @@ def generate(audience: str, topic: str, subject: str, num_sections: int,
         if isinstance(item, tuple) and item[0] == "RESULT":
             blog_data = item[1]
         elif isinstance(item, tuple) and item[0] == "ERROR":
-            err_msg = "\n".join(log_lines) + mode.error_msg(item[1])
+            err_msg = log_text + mode.error_msg(item[1])
             yield err_msg, None, None, None, None, gr.update()
             return
         else:
             clean = _ANSI_RE.sub("", str(item)).strip()
             if clean:
-                log_lines.append(clean)
-            yield "\n".join(log_lines), None, None, None, None, gr.update()
+                log_text += clean + "\n"
+            yield log_text, None, None, None, None, gr.update()
 
     if blog_data:
         html_str = create_html(blog_data, dark=dark_mode, audience=mode.crew_type,
@@ -140,7 +140,7 @@ def generate(audience: str, topic: str, subject: str, num_sections: int,
         preview_html = _wrap_preview(html_str)
         updated_choices = _report_choices()
 
-        done_msg = "\n".join(log_lines) + mode.done_msg
+        done_msg = log_text + mode.done_msg
         yield done_msg, preview_html, str(html_path), md_path, ws_path, gr.update(choices=updated_choices)
 
 

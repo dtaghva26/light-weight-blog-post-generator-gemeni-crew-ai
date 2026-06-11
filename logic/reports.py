@@ -8,6 +8,13 @@ from logic.logger import get_logger
 REPORTS_DIR = Path("reports")
 _log = get_logger("reports")
 
+_list_cache: list | None = None
+
+
+def _invalidate_list_cache() -> None:
+    global _list_cache
+    _list_cache = None
+
 
 def _ensure_reports_dir():
     REPORTS_DIR.mkdir(exist_ok=True)
@@ -38,10 +45,14 @@ def save_report(blog_data: dict, html_string: str, audience: str = "adult") -> P
     html_path.write_text(html_string, encoding="utf-8")
     json_path.write_text(json.dumps(blog_data, ensure_ascii=False, indent=2), encoding="utf-8")
     _log.info("report_saved  audience=%s  path=%s", audience, html_path)
+    _invalidate_list_cache()
     return html_path
 
 
 def list_reports() -> list:
+    global _list_cache
+    if _list_cache is not None:
+        return _list_cache
     _ensure_reports_dir()
     html_files = sorted(REPORTS_DIR.glob("*.html"), reverse=True)
     reports = []
@@ -62,6 +73,7 @@ def list_reports() -> list:
         except ValueError:
             ts = ts_str
         reports.append({"path": str(html_path), "title": title, "timestamp": ts})
+    _list_cache = reports
     return reports
 
 

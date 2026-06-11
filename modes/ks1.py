@@ -25,6 +25,8 @@ def _build(topic: str, num_sections: int, words_per_section: int, subject: str =
     gemini_llm = LLM(
         model="gemini/gemini-3.5-flash",
         api_key=os.getenv("GEMINI_API_KEY") or os.getenv("Gemeni_API_KEY"),
+        timeout=60,
+        max_retries=2,
     )
 
     words = min(words_per_section, 100)
