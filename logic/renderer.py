@@ -12,35 +12,10 @@ def create_html(blog_data: dict, dark: bool = False, audience: str = "adult") ->
     author = blog_data["author"]
     sections = blog_data["sections"]
 
-    if audience == "absolutist" or audience == "kids":
-        extra_css = """
-        @import url('https://fonts.googleapis.com/css2?family=Poppins:wght@400;600;700;800&display=swap');
-        body { font-family: 'Poppins', sans-serif !important; }
-        h1 { font-size: 2.4rem; font-weight: 800; color: #FF6B9D !important; }
-        h2 { font-size: 1.6rem; font-weight: 700; color: #7888BF !important; border-left: 6px solid #FFE87C; padding-left: 12px; margin-top: 2rem; }
-        p  { font-size: 1.1rem; line-height: 1.8; }
-        .author { color: #FF6B9D; font-weight: 600; font-size: 1.1rem; }
-        """
-    elif audience == "multiplist":
-        extra_css = """
-        @import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap');
-        body { font-family: 'Inter', sans-serif !important; }
-        h1 { font-size: 2rem; font-weight: 700; color: #5B6EF5 !important; }
-        h2 { font-size: 1.35rem; font-weight: 600; color: #3D8EBF !important; border-left: 4px solid #B8C7FF; padding-left: 12px; margin-top: 1.8rem; }
-        p  { font-size: 1.05rem; line-height: 1.85; }
-        .author { color: #5B6EF5; font-weight: 500; font-size: 1rem; }
-        """
-    elif audience == "master":
-        extra_css = """
-        @import url('https://fonts.googleapis.com/css2?family=Crimson+Text:ital,wght@0,400;0,600;1,400&display=swap');
-        body { font-family: 'Crimson Text', Georgia, serif !important; }
-        h1 { font-size: 2.1rem; font-weight: 600; color: #2C2416 !important; letter-spacing: 0.01em; }
-        h2 { font-size: 1.4rem; font-weight: 600; color: #5C4A1E !important; border-left: 3px solid #C8A96E; padding-left: 14px; margin-top: 2rem; font-style: italic; }
-        p  { font-size: 1.1rem; line-height: 1.95; text-align: justify; }
-        blockquote { border-left: 3px solid #C8A96E; padding-left: 1rem; color: #5C4A1E; font-style: italic; }
-        .author { color: #5C4A1E; font-weight: 600; font-size: 1rem; letter-spacing: 0.02em; }
-        """
-    else:
+    try:
+        from modes.registry import get as get_mode
+        extra_css = get_mode(audience).report_css
+    except KeyError:
         extra_css = ""
 
     if dark:

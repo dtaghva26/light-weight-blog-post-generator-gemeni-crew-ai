@@ -1,11 +1,17 @@
 import gradio as gr
 
-from frontend.gradio.themes import EVALUATIVIST_THEME as ADULT_THEME
+from modes.registry import all_modes as _all_modes
+
+_modes = _all_modes()
+_mode_names = [m.display_name for m in _modes]
+_default_mode = next(m for m in _modes if m.crew_type == "evaluativist")
+
 from frontend.gradio.handlers import (
     generate,
     load_history,
     rerender_dark,
     update_ui,
+    on_age_submit,
     _report_choices,
 )
 
@@ -44,66 +50,103 @@ with gr.Blocks(
     css="""
     .generate-btn { font-size: 1rem !important; }
     #log-box textarea { font-family: monospace; font-size: 0.8rem; }
+    .age-gate-wrap {
+        display: flex !important;
+        flex-direction: column !important;
+        align-items: center !important;
+        justify-content: center !important;
+        min-height: 60vh;
+        text-align: center;
+        padding: 2rem;
+    }
+    .age-gate-inner { max-width: 320px; width: 100%; margin: 0 auto; }
     """,
 ) as demo:
 
-    with gr.Row():
-        audience_selector = gr.Radio(
-            ["Absolutist", "Multiplist", "Evaluativist", "Master Thinker"],
-            label="Critical Thinking Stage",
-            value="Evaluativist",
-        )
-
-    style_tag = gr.HTML("", visible=True)
-    title_markdown = gr.Markdown(ADULT_THEME["title"])
-
-    with gr.Row():
-        with gr.Column(scale=3):
-            topic_input = gr.Textbox(
-                label=ADULT_THEME["topic_label"],
-                value="AI",
-                placeholder=ADULT_THEME["topic_placeholder"],
-                lines=1,
+    # ── Age gate (shown on load) ──────────────────────────────────────────────
+    with gr.Column(visible=True, elem_classes="age-gate-wrap") as age_gate:
+        gr.Markdown("## How old are you?\n\nWe'll tailor the experience just for you.")
+        with gr.Column(elem_classes="age-gate-inner"):
+            age_input = gr.Number(
+                label="Your age",
+                minimum=1,
+                maximum=120,
+                precision=0,
+                value=None,
             )
-        with gr.Column(scale=1):
-            gen_btn = gr.Button(ADULT_THEME["gen_btn"], variant="primary", elem_classes="generate-btn")
+            age_btn = gr.Button("Get Started", variant="primary", size="lg")
 
-    with gr.Accordion("Advanced settings", open=False) as settings_accordion:
+    # ── Main app (hidden until age is entered) ────────────────────────────────
+    with gr.Column(visible=False) as main_ui:
+
         with gr.Row():
-            num_sections = gr.Slider(2, 5, value=3, step=1, label="Number of sections")
-            words_per_section = gr.Slider(100, 400, value=200, step=50, label="Words per section")
-
-    dark_toggle = gr.Checkbox(label="Dark mode (report)", value=False)
-
-    with gr.Row():
-        with gr.Column(scale=1):
-            log_box = gr.Textbox(
-                label=ADULT_THEME["log_label"],
-                lines=20,
-                interactive=False,
-                elem_id="log-box",
-                autoscroll=True,
-                placeholder=ADULT_THEME["log_placeholder"],
+            audience_selector = gr.Radio(
+                _mode_names,
+                label="Critical Thinking Stage",
+                value=_default_mode.display_name,
             )
-        with gr.Column(scale=2):
-            html_preview = gr.HTML(label=ADULT_THEME["preview_label"])
 
-    with gr.Row():
-        dl_html = gr.File(label="Download HTML", interactive=False)
-        dl_md = gr.File(label="Download Markdown", interactive=False)
+        style_tag = gr.HTML("", visible=True)
+        title_markdown = gr.Markdown(_default_mode.title)
 
-    gr.Markdown("---")
-    history_title = gr.Markdown("### Past Reports")
-    with gr.Row():
-        history_dd = gr.Dropdown(
-            label="Load a past report",
-            choices=_report_choices(),
-            interactive=True,
-            scale=4,
-        )
-        load_btn = gr.Button("Load", scale=1)
+        with gr.Row():
+            with gr.Column(scale=3):
+                topic_input = gr.Textbox(
+                    label=_default_mode.topic_label,
+                    value="AI",
+                    placeholder=_default_mode.topic_placeholder,
+                    lines=1,
+                )
+            with gr.Column(scale=1):
+                gen_btn = gr.Button(_default_mode.gen_btn, variant="primary", elem_classes="generate-btn")
 
-    # Event wiring
+        with gr.Accordion(_default_mode.settings_label, open=False) as settings_accordion:
+            with gr.Row():
+                num_sections = gr.Slider(2, 5, value=3, step=1, label=_default_mode.num_sections_label)
+                words_per_section = gr.Slider(100, 400, value=200, step=50, label=_default_mode.words_per_section_label)
+
+        dark_toggle = gr.Checkbox(label=_default_mode.dark_toggle_label, value=False)
+
+        with gr.Row():
+            with gr.Column(scale=1):
+                log_box = gr.Textbox(
+                    label=_default_mode.log_label,
+                    lines=20,
+                    interactive=False,
+                    elem_id="log-box",
+                    autoscroll=True,
+                    placeholder=_default_mode.log_placeholder,
+                )
+            with gr.Column(scale=2):
+                html_preview = gr.HTML(label=_default_mode.preview_label)
+
+        with gr.Row():
+            dl_html = gr.File(label=_default_mode.dl_html_label, interactive=False)
+            dl_md = gr.File(label=_default_mode.dl_md_label, interactive=False)
+
+        gr.Markdown("---")
+        history_title = gr.Markdown(_default_mode.history_title)
+        with gr.Row():
+            history_dd = gr.Dropdown(
+                label=_default_mode.history_dd_label,
+                choices=_report_choices(),
+                interactive=True,
+                scale=4,
+            )
+            load_btn = gr.Button(_default_mode.load_btn_label, scale=1)
+
+    # ── Event wiring ──────────────────────────────────────────────────────────
+    _age_outputs = [
+        age_gate, main_ui, audience_selector,
+        style_tag, title_markdown, topic_input, gen_btn, log_box,
+        html_preview, settings_accordion, num_sections,
+        words_per_section, dark_toggle, history_title,
+        history_dd, load_btn, dl_html, dl_md,
+    ]
+
+    age_btn.click(fn=on_age_submit, inputs=[age_input], outputs=_age_outputs)
+    age_input.submit(fn=on_age_submit, inputs=[age_input], outputs=_age_outputs)
+
     audience_selector.change(
         fn=_build_update_ui_outputs(
             style_tag, title_markdown, topic_input, gen_btn, log_box, html_preview,

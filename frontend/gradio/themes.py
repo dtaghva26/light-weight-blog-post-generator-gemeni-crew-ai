@@ -1,3 +1,17 @@
+# DEPRECATED: All theme data has moved to modes/<name>.py.
+# This file is kept only so hello.ipynb and any external scripts don't break.
+# Safe to delete once you've confirmed nothing imports from it.
+
+KIDS_THEME = {
+    "title": "# 🦄✨ STORY MAGIC MACHINE ✨🦄\n### Tell me what you LOVE and I'll make an AMAZING story JUST FOR YOU! 🎉🎈🌈",
+    "topic_label": "🌈 What do you love? Type it here! 👇",
+    "topic_placeholder": "🦕 dinosaurs   🚀 rockets   🐬 dolphins   🦁 lions   🌈 rainbows   🍕 pizza...",
+    "gen_btn": "🪄✨ MAKE MY STORY! ✨🪄",
+    "log_label": "🤖💫 The story robots are working RIGHT NOW...",
+    "log_placeholder": "🌟 Click the magic button and watch the robots make your story! 🌟",
+    "preview_label": "🎉🥳 YOUR SUPER AMAZING STORY IS HERE! 🥳🎉",
+}
+
 ABSOLUTIST_THEME = {
     "title": "# 🌟 My Story Maker 🌟\nTell me a topic and I'll write a story for you! ✨",
     "topic_label": "✏️ What do you want to learn about?",
