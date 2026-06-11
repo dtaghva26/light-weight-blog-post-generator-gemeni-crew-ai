@@ -7,8 +7,11 @@ from dotenv import load_dotenv
 from pydantic import ValidationError
 
 from logic.models import StructuredBlogPost
+from logic.logger import get_logger
 
 load_dotenv()
+
+_log = get_logger("crew")
 
 
 def run_crew_streaming(topic: str, num_sections: int, words_per_section: int, crew_type: str = "evaluativist"):
@@ -28,6 +31,8 @@ def run_crew_streaming(topic: str, num_sections: int, words_per_section: int, cr
             pass
 
     def _run():
+        _log.info("run_start  crew_type=%s  topic=%r  sections=%d  words=%d",
+                  crew_type, topic, num_sections, words_per_section)
         old_stdout = sys.stdout
         sys.stdout = QueueWriter()
         try:
@@ -38,10 +43,14 @@ def run_crew_streaming(topic: str, num_sections: int, words_per_section: int, cr
             if blog_data is None:
                 blog_data = json.loads(result.raw)
             StructuredBlogPost(**blog_data)
+            _log.info("run_success  crew_type=%s  title=%r  sections=%d",
+                      crew_type, blog_data.get("title", ""), len(blog_data.get("sections", [])))
             log_q.put(("RESULT", blog_data))
         except ValidationError as e:
+            _log.error("run_validation_error  crew_type=%s  error=%s", crew_type, e)
             log_q.put(("ERROR", f"LLM returned invalid structure: {e}"))
         except Exception as e:
+            _log.error("run_error  crew_type=%s  error=%s", crew_type, e, exc_info=True)
             log_q.put(("ERROR", str(e)))
         finally:
             sys.stdout = old_stdout

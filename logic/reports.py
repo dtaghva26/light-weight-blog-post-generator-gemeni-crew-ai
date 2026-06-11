@@ -3,7 +3,10 @@ import re
 from datetime import datetime
 from pathlib import Path
 
+from logic.logger import get_logger
+
 REPORTS_DIR = Path("reports")
+_log = get_logger("reports")
 
 
 def _ensure_reports_dir():
@@ -34,6 +37,7 @@ def save_report(blog_data: dict, html_string: str, audience: str = "adult") -> P
 
     html_path.write_text(html_string, encoding="utf-8")
     json_path.write_text(json.dumps(blog_data, ensure_ascii=False, indent=2), encoding="utf-8")
+    _log.info("report_saved  audience=%s  path=%s", audience, html_path)
     return html_path
 
 

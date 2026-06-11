@@ -8,6 +8,9 @@ _ANSI_RE = re.compile(r"\x1b\[[0-9;]*[mGKHF]")
 from logic.crew import run_crew_streaming
 from logic.renderer import create_html, blog_to_markdown
 from logic.reports import save_report, list_reports, load_report_html, load_report_json
+from logic.logger import get_logger
+
+_log = get_logger("handlers")
 
 
 def _wrap_preview(html_str: str) -> str:
@@ -38,8 +41,12 @@ def generate(audience: str, topic: str, num_sections: int, words_per_section: in
     mode = by_display_name(audience)
 
     if not topic.strip():
+        _log.debug("generate_skipped  audience=%s  reason=empty_topic", audience)
         yield mode.empty_msg, None, None, None, gr.update()
         return
+
+    _log.info("generate_requested  audience=%s  topic=%r  sections=%d  words=%d",
+              audience, topic.strip(), int(num_sections), int(words_per_section))
 
     log_lines: list[str] = []
     blog_data = None
@@ -75,6 +82,7 @@ def generate(audience: str, topic: str, num_sections: int, words_per_section: in
 def load_history(choice: str, dark_mode: bool):
     if not choice:
         return None, None, None
+    _log.info("history_load  choice=%r  dark=%s", choice, dark_mode)
     path = _choice_to_path(choice)
     if not path:
         return None, None, None
@@ -106,6 +114,7 @@ def age_to_mode(age: int) -> str:
 
 
 def on_age_submit(age):
+    _log.info("age_gate  age=%s  routed_to=%s", age, age_to_mode(int(age) if age else 18))
     mode_name = age_to_mode(int(age) if age else 18)
     ui = update_ui(mode_name)
     return (
